@@ -9,11 +9,27 @@ from data.ett import ETTWindowDataset
 from models.registry import build_model
 from losses.tpc_loss import TPCLoss
 
+def pick_device(cfg):
+    requested = cfg["training"].get("device", "auto")
+
+    if requested == "auto":
+
+        if torch.cuda.is_available():
+            return torch.device("cuda")
+        if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            return torch.device("mps")
+        return torch.device("cpu")
+    else:
+        return torch.device(requested)
+
+
+
 
 def train(config_path):
     cfg = load_config(config_path)
 
-    device = torch.device(cfg["training"]["device"])
+    device = pick_device(cfg)
+    print(f"Using device: {device}")
 
     # 1. Dataset and loader
     dcfg = cfg["dataset"]
@@ -38,7 +54,7 @@ def train(config_path):
     model = build_model(cfg, num_channels=num_channels).to(device)
 
     # 3. Loss and optimizer
-    tpc_loss = TPCLoss(cfg)
+    tpc_loss = TPCLoss(cfg["loss"])
     opt = torch.optim.AdamW(
         model.parameters(),
         lr=cfg["training"]["lr"],

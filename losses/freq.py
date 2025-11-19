@@ -8,8 +8,16 @@ def freq_loss(x, x_rec, freq_cfg):
     freq_cfg:
         - use_full_spectrum: bool
         - max_bins: int or None
-        - use_log: bool (new)
-        - normalize: bool (new)
+        - use_log: bool
+        - normalize: bool
+
+    Idea:
+    - rFFT over time
+    - take magnitude
+    - optionally truncate high freqs
+    - optionally normalize each spectrum (shape matching)
+    - optionally take log magnitude to reduce peak dominance
+    - L2 difference between spectra
     """
     use_full = bool(freq_cfg.get("use_full_spectrum", True))
     max_bins = freq_cfg.get("max_bins", None)
@@ -26,13 +34,14 @@ def freq_loss(x, x_rec, freq_cfg):
     x_c = x_c - x_c.mean(dim=2, keepdim=True)
     xr_c = xr_c - xr_c.mean(dim=2, keepdim=True)
 
-    # rFFT
-    X = torch.fft.rfft(x_c, dim=2)
+    # rFFT over time dimension
+    X = torch.fft.rfft(x_c, dim=2)   # [B, C, F]
     Xr = torch.fft.rfft(xr_c, dim=2)
 
-    mag_X = torch.abs(X)      # [B, C, F]
+    mag_X = torch.abs(X)
     mag_Xr = torch.abs(Xr)
 
+    # optionally truncate spectrum
     if not use_full and max_bins is not None:
         max_bins = int(max_bins)
         mag_X = mag_X[:, :, :max_bins]
@@ -41,7 +50,7 @@ def freq_loss(x, x_rec, freq_cfg):
     eps = 1e-8
 
     if normalize:
-        # normalize each (B, C, :) spectrum along freq axis
+        # normalize each spectrum along frequency axis
         mag_X = mag_X / (mag_X.sum(dim=-1, keepdim=True) + eps)
         mag_Xr = mag_Xr / (mag_Xr.sum(dim=-1, keepdim=True) + eps)
 
