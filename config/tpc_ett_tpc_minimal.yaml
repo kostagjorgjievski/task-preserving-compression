@@ -7,7 +7,7 @@ dataset:
 model:
   type: "cnn_ae"
   input_length: 336
-  latent_dim: 64
+  latent_dim: 128cl
   num_channels: 7         # change according to your ETT file
 
 training:
