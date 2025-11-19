@@ -1,0 +1,45 @@
+dataset:
+  name: "ETTh1"
+  csv_path: "data/ETTh1.csv"  # change this
+  context_length: 336
+  stride: 1
+
+model:
+  type: "cnn_ae"
+  input_length: 336
+  latent_dim: 64
+  num_channels: 7         # change according to your ETT file
+
+training:
+  batch_size: 64
+  max_epochs: 30
+  lr: 0.001
+  weight_decay: 0.00001
+  device: "cpu"
+  # device: "cuda"
+
+loss:
+  use_mse: true
+  use_acf: true
+  use_periodicity: false
+  use_motif: false
+  use_freq: true
+
+  lambda_mse: 1.0
+  lambda_acf: 0.5
+  lambda_periodicity: 0.0
+  lambda_motif: 0.0
+  lambda_freq: 0.01
+
+
+  acf:
+    max_lag: 48           # change if needed
+    periodic_lags: [24, 48]
+
+  freq:
+    use_full_spectrum: true
+    max_bins: null        # or an integer, e.g. 128
+
+logging:
+  log_every_n_steps: 50
+  ckpt_dir: "checkpoints/ett_tpc_minimal"
