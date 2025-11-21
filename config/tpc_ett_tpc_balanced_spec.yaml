@@ -15,15 +15,17 @@ training:
   max_epochs: 30
   lr: 0.001
   weight_decay: 0.00001
-  device: "cuda"
+  device: "cuda"        # or "cpu" if you want, does not change behavior
 
 validation:
   val_frac: 0.1
   windows: 50
   max_lag: 48
   fs: 1.0
-  alpha_acf: 10.0       # back closer to medium
-  alpha_spec: 1.2       # stronger spectral emphasis
+
+  # How we pick best_struct.pt
+  alpha_acf: 10.0
+  alpha_spec: 1.0
 
 loss:
   use_mse: true
@@ -32,11 +34,12 @@ loss:
   use_motif: false
   use_freq: true
 
+  # Spectral specialist
   lambda_mse: 1.0
-  lambda_acf: 0.5        # softer than v2 so it does not dominate
+  lambda_acf: 0.5
   lambda_periodicity: 0.05
   lambda_motif: 0.0
-  lambda_freq: 0.18      # stronger than v1/v2 (was 0.1)
+  lambda_freq: 0.2
 
   acf:
     max_lag: 48
