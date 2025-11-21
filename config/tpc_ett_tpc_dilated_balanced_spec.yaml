@@ -5,7 +5,7 @@ dataset:
   stride: 1
 
 model:
-  type: "cnn_ae"
+  type: "dilated_cnn_ae"   # <- use the new dilated model
   input_length: 336
   latent_dim: 118
   num_channels: 7
@@ -15,15 +15,18 @@ training:
   max_epochs: 30
   lr: 0.001
   weight_decay: 0.00001
-  device: "cuda"
+  device: "cpu"            # will still run, just slower
 
 validation:
   val_frac: 0.1
   windows: 50
   max_lag: 48
   fs: 1.0
-  alpha_acf: 10.0       # back closer to medium
-  alpha_spec: 1.2       # stronger spectral emphasis
+
+  # Score weights for picking best_struct.pt
+  # We care a LOT about spectrum now, and still quite a bit about ACF.
+  alpha_acf: 8.0
+  alpha_spec: 2.0
 
 loss:
   use_mse: true
@@ -32,11 +35,13 @@ loss:
   use_motif: false
   use_freq: true
 
+  # Goal: ACF still strong, but no longer overwhelming;
+  # give frequency a real voice in the optimization.
   lambda_mse: 1.0
-  lambda_acf: 0.5        # softer than v2 so it does not dominate
+  lambda_acf: 0.5         # was effectively "too strong" in previous dilated run
   lambda_periodicity: 0.05
   lambda_motif: 0.0
-  lambda_freq: 0.18      # stronger than v1/v2 (was 0.1)
+  lambda_freq: 0.3        # significantly stronger than before (0.1)
 
   acf:
     max_lag: 48
@@ -50,4 +55,4 @@ loss:
 
 logging:
   log_every_n_steps: 50
-  ckpt_dir: "checkpoints/ett_tpc_balanced_spec"
+  ckpt_dir: "checkpoints/ett_tpc_dilated_balanced_spec"
