@@ -1,0 +1,53 @@
+dataset:
+  name: "ETTh1"
+  csv_path: "data/ETTh1.csv"
+  context_length: 336
+  stride: 1
+
+model:
+  type: "cnn_ae"
+  input_length: 336
+  latent_dim: 118
+  num_channels: 7
+
+training:
+  batch_size: 64
+  max_epochs: 30
+  lr: 0.001
+  weight_decay: 0.00001
+  device: "cpu"
+
+validation:
+  val_frac: 0.1
+  windows: 50
+  max_lag: 48
+  fs: 1.0
+  alpha_acf: 10.0       # back closer to medium
+  alpha_spec: 1.2       # stronger spectral emphasis
+
+loss:
+  use_mse: true
+  use_acf: true
+  use_periodicity: true
+  use_motif: false
+  use_freq: true
+
+  lambda_mse: 1.0
+  lambda_acf: 0.5        # softer than v2 so it does not dominate
+  lambda_periodicity: 0.05
+  lambda_motif: 0.0
+  lambda_freq: 0.18      # stronger than v1/v2 (was 0.1)
+
+  acf:
+    max_lag: 48
+
+  periodicity:
+    seasonal_lags: [24, 48]
+
+  freq:
+    use_log: true
+    normalize: true
+
+logging:
+  log_every_n_steps: 50
+  ckpt_dir: "checkpoints/ett_tpc_balanced_spec"

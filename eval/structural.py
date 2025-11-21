@@ -37,9 +37,11 @@ def spectrum_1d(x, fs=1.0):
     return f, Pxx
 
 
-def spectrum_deviation(x, x_rec, fs=1.0):
+def spectrum_deviation(x, x_rec, fs=1.0, eps=1e-8):
     f1, S1 = spectrum_1d(x, fs)
     f2, S2 = spectrum_1d(x_rec, fs)
-    # assume same grid
-    dev = np.mean((S1 - S2) ** 2)
-    return dev, (f1, S1), (f2, S2)
+    log1 = np.log(S1 + eps)
+    log2 = np.log(S2 + eps)
+    dev = np.mean((log1 - log2) ** 2)
+    return dev, (f1, log1), (f2, log2)
+

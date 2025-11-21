@@ -1,8 +1,10 @@
+# losses/tpc_loss.py
 import torch
 import torch.nn.functional as F
 
-from .acf import acf_loss
+from .acf import acf_loss, compute_acf_batch
 from .freq import freq_loss
+from .periodicity import periodicity_loss
 
 
 class TPCLoss:
@@ -23,8 +25,12 @@ class TPCLoss:
 
         self.acf_cfg = lcfg.get("acf", {})
         self.freq_cfg = lcfg.get("freq", {})
+        self.periodicity_cfg = lcfg.get("periodicity", {})
 
-        # periodicity and motif will be added later and will use acf_cfg and their own config
+        # for shared ACF computation
+        self.acf_max_lag = int(self.acf_cfg.get("max_lag", 48))
+        self.seasonal_lags = self.periodicity_cfg.get("seasonal_lags", [24])
+        self.acf_fn = compute_acf_batch
 
     def __call__(self, x, x_rec):
         """
@@ -34,21 +40,31 @@ class TPCLoss:
         total = torch.tensor(0.0, device=x.device)
         comps = {}
 
+        # 1. MSE
         if self.use_mse:
             mse = F.mse_loss(x_rec, x)
             total = total + self.lambda_mse * mse
             comps["mse"] = mse.detach()
+
+        # 2. ACF + periodicity (share ACF computation)
+        if self.use_acf or self.use_periodicity:
+            acf_orig = self.acf_fn(x, self.acf_max_lag)       # [B, max_lag+1]
+            acf_rec = self.acf_fn(x_rec, self.acf_max_lag)    # [B, max_lag+1]
 
         if self.use_acf:
             lacf = acf_loss(x, x_rec, self.acf_cfg)
             total = total + self.lambda_acf * lacf
             comps["acf"] = lacf.detach()
 
+        if self.use_periodicity:
+            per = periodicity_loss(acf_orig, acf_rec, self.seasonal_lags)
+            total = total + self.lambda_periodicity * per
+            comps["periodicity"] = per.detach()
+
+        # 3. Frequency
         if self.use_freq:
             lfreq = freq_loss(x, x_rec, self.freq_cfg)
             total = total + self.lambda_freq * lfreq
             comps["freq"] = lfreq.detach()
-
-        # periodicity and motif to be plugged in later
 
         return total, comps

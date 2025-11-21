@@ -1,19 +1,22 @@
+# train_tpc.py
 import os
 from pathlib import Path
 
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, random_split
 
 from utils.config import load_config
 from data.ett import ETTWindowDataset
 from models.registry import build_model
 from losses.tpc_loss import TPCLoss
 
+from eval.eval_structural import compute_structural_metrics_from_model
+
+
 def pick_device(cfg):
     requested = cfg["training"].get("device", "auto")
 
     if requested == "auto":
-
         if torch.cuda.is_available():
             return torch.device("cuda")
         if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
@@ -21,8 +24,6 @@ def pick_device(cfg):
         return torch.device("cpu")
     else:
         return torch.device(requested)
-
-
 
 
 def train(config_path):
@@ -42,8 +43,31 @@ def train(config_path):
     num_channels = dataset.num_channels
     print(f"Dataset windows: {len(dataset)}, channels: {num_channels}")
 
-    loader = DataLoader(
+    # Compression ratio logging
+    context_len = dcfg["context_length"]
+    latent_dim = cfg["model"]["latent_dim"]
+    orig_dim = context_len * num_channels
+    compression_ratio = orig_dim / latent_dim
+    print(
+        f"Compression ratio: original={orig_dim} dims -> latent={latent_dim} dims "
+        f"({compression_ratio:.2f}:1)"
+    )
+
+    # Train / validation split
+    val_frac = cfg.get("validation", {}).get("val_frac", 0.1)
+    n_total = len(dataset)
+    n_val = max(1, int(n_total * val_frac))
+    n_train = n_total - n_val
+
+    train_dataset, val_dataset = random_split(
         dataset,
+        [n_train, n_val],
+        generator=torch.Generator().manual_seed(42),
+    )
+    print(f"Train windows: {len(train_dataset)}, Val windows: {len(val_dataset)}")
+
+    loader = DataLoader(
+        train_dataset,
         batch_size=cfg["training"]["batch_size"],
         shuffle=True,
         num_workers=4,
@@ -54,7 +78,7 @@ def train(config_path):
     model = build_model(cfg, num_channels=num_channels).to(device)
 
     # 3. Loss and optimizer
-    tpc_loss = TPCLoss(cfg["loss"])
+    tpc_loss = TPCLoss(cfg)
     opt = torch.optim.AdamW(
         model.parameters(),
         lr=cfg["training"]["lr"],
@@ -64,14 +88,31 @@ def train(config_path):
     max_epochs = cfg["training"]["max_epochs"]
     log_every = cfg["logging"].get("log_every_n_steps", 50)
 
-    # 4. Training loop
-    global_step = 0
-    model.train()
-
     ckpt_dir = Path(cfg["logging"].get("ckpt_dir", "checkpoints"))
     ckpt_dir.mkdir(parents=True, exist_ok=True)
 
+    # Best tracking
+    best_train_loss = float("inf")
+    best_struct_score = float("inf")
+
+    best_train_path = ckpt_dir / "best_train.pt"
+    best_struct_path = ckpt_dir / "best_struct.pt"
+
+    # Structural val weighting
+    vcfg = cfg.get("validation", {})
+    alpha_acf = float(vcfg.get("alpha_acf", 1.0))
+    alpha_spec = float(vcfg.get("alpha_spec", 1.0))
+    val_windows = int(vcfg.get("windows", 50))
+    max_lag = int(vcfg.get("max_lag", 48))
+    fs = float(vcfg.get("fs", 1.0))
+
+    # 4. Training loop
+    global_step = 0
     for epoch in range(1, max_epochs + 1):
+        model.train()
+        epoch_loss_sum = 0.0
+        epoch_steps = 0
+
         for batch_idx, x in enumerate(loader):
             x = x.to(device)  # [B, L, C]
 
@@ -83,6 +124,8 @@ def train(config_path):
             opt.step()
 
             global_step += 1
+            epoch_steps += 1
+            epoch_loss_sum += loss.item()
 
             if global_step % log_every == 0:
                 msg = f"Epoch {epoch} Step {global_step} | total={loss.item():.4f}"
@@ -90,7 +133,11 @@ def train(config_path):
                     msg += f" {k}={v.item():.4f}"
                 print(msg)
 
-        # save a checkpoint every epoch
+        # Mean train loss this epoch
+        mean_train_loss = epoch_loss_sum / max(1, epoch_steps)
+        print(f"Epoch {epoch} mean train loss: {mean_train_loss:.6f}")
+
+        # Save per-epoch checkpoint
         ckpt_path = ckpt_dir / f"epoch_{epoch}.pt"
         torch.save(
             {
@@ -102,6 +149,64 @@ def train(config_path):
             ckpt_path,
         )
         print(f"Saved checkpoint to {ckpt_path}")
+
+        # Update best_train.pt
+        if mean_train_loss < best_train_loss:
+            best_train_loss = mean_train_loss
+            torch.save(
+                {
+                    "epoch": epoch,
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": opt.state_dict(),
+                    "config": cfg,
+                    "mean_train_loss": mean_train_loss,
+                },
+                best_train_path,
+            )
+            print(
+                f"New best_train.pt at epoch {epoch} "
+                f"(mean train loss={mean_train_loss:.6f})"
+            )
+
+        # === Validation structural evaluation ===
+        val_metrics = compute_structural_metrics_from_model(
+            model,
+            val_dataset,
+            device,
+            num_windows=val_windows,
+            max_lag=max_lag,
+            fs=fs,
+        )
+        val_score = (
+            val_metrics["mse"]
+            + alpha_acf * val_metrics["acf_dev"]
+            + alpha_spec * val_metrics["spec_dev"]
+        )
+        print(
+            f"Epoch {epoch} val structural: "
+            f"mse={val_metrics['mse']:.6f} "
+            f"acf_dev={val_metrics['acf_dev']:.6f} "
+            f"spec_dev={val_metrics['spec_dev']:.6f} "
+            f"| score={val_score:.6f}"
+        )
+
+        if val_score < best_struct_score:
+            best_struct_score = val_score
+            torch.save(
+                {
+                    "epoch": epoch,
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": opt.state_dict(),
+                    "config": cfg,
+                    "val_metrics": val_metrics,
+                    "val_score": val_score,
+                },
+                best_struct_path,
+            )
+            print(
+                f"New best_struct.pt at epoch {epoch} "
+                f"(score={val_score:.6f})"
+            )
 
 
 if __name__ == "__main__":

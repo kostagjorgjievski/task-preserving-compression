@@ -1,31 +1,29 @@
 dataset:
   name: "ETTh1"
-  csv_path: "data/ETTh1.csv"  # change this
+  csv_path: "data/ETTh1.csv"
   context_length: 336
   stride: 1
 
 model:
   type: "cnn_ae"
   input_length: 336
-  latent_dim: 118 
-  num_channels: 7         # change according to your ETT file
+  latent_dim: 118
+  num_channels: 7
 
 training:
-  batch_size: 64        # keep smaller on Mac if you want
+  batch_size: 64
   max_epochs: 30
   lr: 0.001
   weight_decay: 0.00001
-  device: "cpu"        # will be resolved by pick_device()
+  device: "cpu"
 
 validation:
-  val_frac: 0.1      # 10% windows for validation
-  windows: 50        # how many windows per epoch for structural eval
+  val_frac: 0.1
+  windows: 50
   max_lag: 48
   fs: 1.0
-  alpha_acf: 10.0    # tune later
-  alpha_spec: 1.0
-
-
+  alpha_acf: 5.0      # weaker structural strength
+  alpha_spec: 0.5
 
 loss:
   use_mse: true
@@ -35,10 +33,10 @@ loss:
   use_freq: true
 
   lambda_mse: 1.0
-  lambda_acf: 0.5  
+  lambda_acf: 0.1     # very small
   lambda_periodicity: 0.0
   lambda_motif: 0.0
-  lambda_freq: 0.1
+  lambda_freq: 0.05   # very small
 
   acf:
     max_lag: 48
@@ -50,7 +48,6 @@ loss:
     use_log: true
     normalize: true
 
-
 logging:
   log_every_n_steps: 50
-  ckpt_dir: "checkpoints/ett_tpc_minimal"
+  ckpt_dir: "checkpoints/ett_tpc_gentle"

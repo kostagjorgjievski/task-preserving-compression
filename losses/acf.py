@@ -1,49 +1,41 @@
+# losses/acf.py
 import torch
 
 
-def _acf_1d(x, max_lag):
+def compute_acf_batch(x, max_lag: int):
     """
-    x: [B, L] zero mean
-    returns: [B, max_lag + 1]
+    x: [B, L, C]
+    returns: acf [B, max_lag+1], averaged over channels.
     """
-    B, L = x.shape
-    denom = (x ** 2).sum(dim=1, keepdim=True) + 1e-8  # [B, 1]
+    B, L, C = x.shape
 
-    acfs = []
+    # [B, L, C] -> [B, C, L] -> [B*C, L]
+    x_bc = x.permute(0, 2, 1).reshape(B * C, L)
+
+    # center per (batch, channel)
+    x_bc = x_bc - x_bc.mean(dim=1, keepdim=True)
+
+    # denominator is variance * L (sum of squares)
+    denom = (x_bc ** 2).sum(dim=1) + 1e-8  # [B*C]
+
+    acf = x_bc.new_empty(B * C, max_lag + 1)
+
     for k in range(max_lag + 1):
-        if k == 0:
-            num = denom
-        else:
-            # x[:, :-k] * x[:, k:]
-            num = (x[:, :-k] * x[:, k:]).sum(dim=1, keepdim=True)
-        acfs.append(num / denom)
+        # overlap region length L - k
+        prod = x_bc[:, : L - k] * x_bc[:, k:]
+        num = prod.sum(dim=1)          # [B*C]
+        acf[:, k] = num / denom        # normalized autocorr
 
-    acf = torch.cat(acfs, dim=1)  # [B, max_lag + 1]
+    # [B*C, max_lag+1] -> [B, C, max_lag+1] -> average over C
+    acf = acf.view(B, C, max_lag + 1).mean(dim=1)   # [B, max_lag+1]
     return acf
 
 
-def acf_loss(x, x_rec, acf_cfg):
+def acf_loss(x, x_rec, cfg):
     """
-    x, x_rec: [B, L, C]
-    acf_cfg: dict with keys:
-        - max_lag: int
-        - periodic_lags: list[int] (not used here, but can support periodic-only variant)
-    We compute full ACF up to max_lag for each channel, then L2 difference.
+    Scalar ACF MSE loss used in training.
     """
-    max_lag = int(acf_cfg.get("max_lag", 48))
-
-    # center along time
-    x_c = x - x.mean(dim=1, keepdim=True)          # [B, L, C]
-    xr_c = x_rec - x_rec.mean(dim=1, keepdim=True)
-
-    B, L, C = x.shape
-
-    # reshape to 2D for acf: [B*C, L]
-    x_flat = x_c.permute(0, 2, 1).contiguous().view(B * C, L)
-    xr_flat = xr_c.permute(0, 2, 1).contiguous().view(B * C, L)
-
-    acf_x = _acf_1d(x_flat, max_lag)    # [B*C, max_lag+1]
-    acf_xr = _acf_1d(xr_flat, max_lag)
-
-    loss = torch.mean((acf_x - acf_xr) ** 2)
-    return loss
+    max_lag = int(cfg.get("max_lag", 48))
+    acf_orig = compute_acf_batch(x, max_lag)
+    acf_rec = compute_acf_batch(x_rec, max_lag)
+    return torch.mean((acf_orig - acf_rec) ** 2)

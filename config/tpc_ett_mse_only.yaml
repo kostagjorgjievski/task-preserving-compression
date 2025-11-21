@@ -7,7 +7,7 @@ dataset:
 model:
   type: "cnn_ae"
   input_length: 336
-  latent_dim: 118 
+  latent_dim: 118
   num_channels: 7         # change according to your ETT file
 
 training:
@@ -17,40 +17,30 @@ training:
   weight_decay: 0.00001
   device: "cpu"        # will be resolved by pick_device()
 
-validation:
-  val_frac: 0.1      # 10% windows for validation
-  windows: 50        # how many windows per epoch for structural eval
-  max_lag: 48
-  fs: 1.0
-  alpha_acf: 10.0    # tune later
-  alpha_spec: 1.0
-
-
-
 loss:
   use_mse: true
-  use_acf: true
+  use_acf: false
   use_periodicity: false
   use_motif: false
-  use_freq: true
+  use_freq: false
 
   lambda_mse: 1.0
-  lambda_acf: 0.5  
+  lambda_acf: 0.0
   lambda_periodicity: 0.0
   lambda_motif: 0.0
-  lambda_freq: 0.1
+  lambda_freq: 0.0
 
   acf:
     max_lag: 48
-
-  periodicity:
-    seasonal_lags: [24, 48]
+    periodic_lags: [24, 48]
 
   freq:
+    use_full_spectrum: true
+    max_bins: null
     use_log: true
     normalize: true
 
-
 logging:
+  ckpt_dir: "checkpoints/ett_mse_only"
   log_every_n_steps: 50
-  ckpt_dir: "checkpoints/ett_tpc_minimal"
+

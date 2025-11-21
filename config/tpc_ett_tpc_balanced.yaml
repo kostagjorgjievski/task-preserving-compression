@@ -1,0 +1,54 @@
+dataset:
+  name: "ETTh1"
+  csv_path: "data/ETTh1.csv"
+  context_length: 336
+  stride: 1
+
+model:
+  type: "cnn_ae"
+  input_length: 336
+  latent_dim: 118
+  num_channels: 7   # adjust if your ETT file uses a different channel count
+
+training:
+  batch_size: 64
+  max_epochs: 30
+  lr: 0.001
+  weight_decay: 0.00001
+  device: "cpu"     # will be overridden by pick_device() if you implemented that
+
+validation:
+  val_frac: 0.1
+  windows: 50
+  max_lag: 48
+  fs: 1.0
+  alpha_acf: 12.0    # stronger structural emphasis than medium
+  alpha_spec: 0.8    # slightly softer than medium so it doesn't dominate
+
+loss:
+  use_mse: true
+  use_acf: true
+  use_periodicity: true
+  use_motif: false
+  use_freq: true
+
+  # We want: good ACF + good spectrum, while keeping MSE in a reasonable range
+  lambda_mse: 1.0
+  lambda_acf: 0.7        # stronger than medium (0.5)
+  lambda_periodicity: 0.05
+  lambda_motif: 0.0
+  lambda_freq: 0.1       # same as medium, since it already helped spectrum
+
+  acf:
+    max_lag: 48
+
+  periodicity:
+    seasonal_lags: [24, 48]
+
+  freq:
+    use_log: true
+    normalize: true
+
+logging:
+  log_every_n_steps: 50
+  ckpt_dir: "checkpoints/ett_tpc_balanced"
