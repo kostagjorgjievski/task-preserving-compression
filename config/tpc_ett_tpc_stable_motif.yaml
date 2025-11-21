@@ -1,0 +1,59 @@
+dataset:
+  name: "ETTh1"
+  csv_path: "data/ETTh1.csv"
+  context_length: 336
+  stride: 1
+
+model:
+  type: "cnn_ae"
+  input_length: 336
+  latent_dim: 118
+  num_channels: 7
+
+training:
+  batch_size: 64
+  max_epochs: 30
+  lr: 0.001
+  weight_decay: 0.00001
+  device: "cuda"
+
+validation:
+  val_frac: 0.1
+  windows: 50
+  max_lag: 48
+  fs: 1.0
+  alpha_acf: 10.0
+  alpha_spec: 1.0
+
+loss:
+  use_mse: true
+  use_acf: true
+  use_periodicity: true
+  use_motif: true          # ← enable motif
+  use_freq: true
+
+  lambda_mse: 2.0
+  lambda_acf: 0.4
+  lambda_periodicity: 0.05
+  lambda_motif: 0.1        # ← start small
+  lambda_freq: 0.12
+
+  acf:
+    max_lag: 48
+
+  periodicity:
+    seasonal_lags: [24, 48]
+
+  freq:
+    use_log: true
+    normalize: true
+
+  motif:                    # ← NEW block
+    patch_len: 24           # 1 day or similar scale
+    stride: 8               # overlapping patches
+    normalize: true
+    reduction: "mean"
+
+logging:
+  log_every_n_steps: 50
+  ckpt_dir: "checkpoints/ett_tpc_stable"

@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from .acf import acf_loss, compute_acf_batch
 from .freq import freq_loss
 from .periodicity import periodicity_loss
+from .motif import motif_loss  # ← NEW
 
 
 class TPCLoss:
@@ -26,6 +27,7 @@ class TPCLoss:
         self.acf_cfg = lcfg.get("acf", {})
         self.freq_cfg = lcfg.get("freq", {})
         self.periodicity_cfg = lcfg.get("periodicity", {})
+        self.motif_cfg = lcfg.get("motif", {})  # ← NEW
 
         # for shared ACF computation
         self.acf_max_lag = int(self.acf_cfg.get("max_lag", 48))
@@ -66,5 +68,11 @@ class TPCLoss:
             lfreq = freq_loss(x, x_rec, self.freq_cfg)
             total = total + self.lambda_freq * lfreq
             comps["freq"] = lfreq.detach()
+
+        # 4. Motif
+        if self.use_motif:
+            lmotif = motif_loss(x, x_rec, self.motif_cfg)
+            total = total + self.lambda_motif * lmotif
+            comps["motif"] = lmotif.detach()
 
         return total, comps
