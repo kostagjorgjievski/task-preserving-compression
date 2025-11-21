@@ -1,6 +1,6 @@
 dataset:
   name: "ETTh1"
-  csv_path: "data/ETTh1.csv"  # change this
+  csv_path: "data/ETTh1.csv"
   context_length: 336
   stride: 1
 
@@ -8,14 +8,22 @@ model:
   type: "cnn_ae"
   input_length: 336
   latent_dim: 118
-  num_channels: 7         # change according to your ETT file
+  num_channels: 7
 
 training:
-  batch_size: 64        # keep smaller on Mac if you want
+  batch_size: 64
   max_epochs: 30
   lr: 0.001
   weight_decay: 0.00001
-  device: "cpu"        # will be resolved by pick_device()
+  device: "cuda"
+
+validation:
+  val_frac: 0.1
+  windows: 50
+  max_lag: 48
+  fs: 1.0
+  alpha_acf: 0.0
+  alpha_spec: 0.0
 
 loss:
   use_mse: true
@@ -32,15 +40,14 @@ loss:
 
   acf:
     max_lag: 48
-    periodic_lags: [24, 48]
+
+  periodicity:
+    seasonal_lags: [24, 48]
 
   freq:
-    use_full_spectrum: true
-    max_bins: null
     use_log: true
     normalize: true
 
 logging:
-  ckpt_dir: "checkpoints/ett_mse_only"
   log_every_n_steps: 50
-
+  ckpt_dir: "checkpoints/ett_mse_only"
