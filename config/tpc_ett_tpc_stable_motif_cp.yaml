@@ -64,4 +64,4 @@ loss:
 
 logging:
   log_every_n_steps: 50
-  ckpt_dir: "checkpoints/ett_tpc_stable"
+  ckpt_dir: "checkpoints/ett_tpc_stable_motif_cp"
