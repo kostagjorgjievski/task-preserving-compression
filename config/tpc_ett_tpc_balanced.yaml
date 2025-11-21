@@ -15,7 +15,7 @@ training:
   max_epochs: 30
   lr: 0.001
   weight_decay: 0.00001
-  device: "cpu"     # will be overridden by pick_device() if you implemented that
+  device: "cuda"     # will be overridden by pick_device() if you implemented that
 
 validation:
   val_frac: 0.1
