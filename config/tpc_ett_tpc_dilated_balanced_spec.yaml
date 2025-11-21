@@ -15,7 +15,7 @@ training:
   max_epochs: 30
   lr: 0.001
   weight_decay: 0.00001
-  device: "cpu"            # will still run, just slower
+  device: "cuda"            # will still run, just slower
 
 validation:
   val_frac: 0.1
