@@ -5,7 +5,8 @@ import torch.nn.functional as F
 from .acf import acf_loss, compute_acf_batch
 from .freq import freq_loss
 from .periodicity import periodicity_loss
-from .motif import motif_loss  # ← NEW
+from .motif import motif_loss
+from .changepoint import changepoint_loss   # ← NEW
 
 
 class TPCLoss:
@@ -17,17 +18,20 @@ class TPCLoss:
         self.use_periodicity = lcfg["use_periodicity"]
         self.use_motif = lcfg["use_motif"]
         self.use_freq = lcfg["use_freq"]
+        self.use_changepoint = lcfg.get("use_changepoint", False)  # ← NEW
 
         self.lambda_mse = float(lcfg["lambda_mse"])
         self.lambda_acf = float(lcfg["lambda_acf"])
         self.lambda_periodicity = float(lcfg["lambda_periodicity"])
         self.lambda_motif = float(lcfg["lambda_motif"])
         self.lambda_freq = float(lcfg["lambda_freq"])
+        self.lambda_changepoint = float(lcfg.get("lambda_changepoint", 0.0))  # ← NEW
 
         self.acf_cfg = lcfg.get("acf", {})
         self.freq_cfg = lcfg.get("freq", {})
         self.periodicity_cfg = lcfg.get("periodicity", {})
-        self.motif_cfg = lcfg.get("motif", {})  # ← NEW
+        self.motif_cfg = lcfg.get("motif", {})
+        self.changepoint_cfg = lcfg.get("changepoint", {})  # ← NEW
 
         # for shared ACF computation
         self.acf_max_lag = int(self.acf_cfg.get("max_lag", 48))
@@ -74,5 +78,11 @@ class TPCLoss:
             lmotif = motif_loss(x, x_rec, self.motif_cfg)
             total = total + self.lambda_motif * lmotif
             comps["motif"] = lmotif.detach()
+
+        # 5. Changepoint
+        if self.use_changepoint:
+            lcp = changepoint_loss(x, x_rec, self.changepoint_cfg)
+            total = total + self.lambda_changepoint * lcp
+            comps["changepoint"] = lcp.detach()
 
         return total, comps

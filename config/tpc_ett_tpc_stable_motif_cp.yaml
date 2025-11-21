@@ -1,0 +1,36 @@
+loss:
+  use_mse: true
+  use_acf: true
+  use_periodicity: true
+  use_motif: true
+  use_freq: true
+  use_changepoint: true         
+
+  lambda_mse: 2.0
+  lambda_acf: 0.4
+  lambda_periodicity: 0.05
+  lambda_motif: 0.1
+  lambda_freq: 0.12
+  lambda_changepoint: 0.05      
+
+  acf:
+    max_lag: 48
+
+  periodicity:
+    seasonal_lags: [24, 48]
+
+  freq:
+    use_log: true
+    normalize: true
+
+  motif:
+    patch_len: 24
+    stride: 8
+    normalize: true
+    reduction: "mean"
+
+  changepoint:                   # ← NEW
+    use_abs: true
+    use_tanh: true
+    scale: 5.0
+    reduction: "mean"

@@ -48,8 +48,8 @@ loss:
     use_log: true
     normalize: true
 
-  motif:                    # ← NEW block
-    patch_len: 24           # 1 day or similar scale
+  motif:                    
+    patch_len: 24           
     stride: 8               # overlapping patches
     normalize: true
     reduction: "mean"
