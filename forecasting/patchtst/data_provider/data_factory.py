@@ -6,6 +6,7 @@ data_dict = {
     'ETTh2': Dataset_ETT_hour,
     'ETTm1': Dataset_ETT_minute,
     'ETTm2': Dataset_ETT_minute,
+    'ETTh1_TPC': Dataset_ETT_hour,
     'custom': Dataset_Custom,
 }
 
