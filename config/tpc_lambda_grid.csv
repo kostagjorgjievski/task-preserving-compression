@@ -1,0 +1,11 @@
+run_id,lambda_acf,lambda_freq,lambda_motif,lambda_cp,lambda_per
+acf0p2_freq0p08_mot0p05_cp0p02_per0p02,0.2,0.08,0.05,0.02,0.02
+acf0p2_freq0p08_mot0p05_cp0p01_per0p02,0.2,0.08,0.05,0.01,0.02
+acf0p2_freq0p12_mot0p02_cp0p02_per0p02,0.2,0.12,0.02,0.02,0.02
+acf0p8_freq0p08_mot0p02_cp0p01_per0p02,0.8,0.08,0.02,0.01,0.02
+acf0p1_freq0p08_mot0p1_cp0p01_per0p01,0.1,0.08,0.1,0.01,0.01
+acf0p8_freq0p12_mot0p1_cp0p02_per0p02,0.8,0.12,0.1,0.02,0.02
+acf0p1_freq0p08_mot0p1_cp0p02_per0p02,0.1,0.08,0.1,0.02,0.02
+acf0p8_freq0p12_mot0p02_cp0p01_per0p02,0.8,0.12,0.02,0.01,0.02
+acf0p1_freq0p08_mot0p05_cp0p02_per0p01,0.1,0.08,0.05,0.02,0.01
+acf0p8_freq0p08_mot0p1_cp0p02_per0p01,0.8,0.08,0.1,0.02,0.01
