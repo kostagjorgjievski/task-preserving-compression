@@ -12,7 +12,7 @@ seq_len=336
 model_name=PatchTST
 
 root_path_name=./dataset/
-data_path_name=ETTh1_tpc.csv   # <- compressed version
+data_path_name=ETTh1_tpc.csv   
 model_id_name=ETTh1_TPC
 data_name=ETTh1                # Dataset_ETT_hour is keyed by 'ETTh1'
 
@@ -44,7 +44,7 @@ do
       --des 'Exp_TPC' \
       --train_epochs 100 \
       --itr 1 \
-      --batch_size 128 \
+      --batch_size 64 \
       --learning_rate 0.0001 \
       >logs/LongForecasting/${model_name}_ETTh1_TPC_${seq_len}_${pred_len}.log
 done
