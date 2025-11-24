@@ -5,7 +5,7 @@ import numpy as np
 # -------------------------------------------------------------------------
 # CONFIG
 # -------------------------------------------------------------------------
-SEEDS = [42, 7, 123, 314, 2025]
+NUM_RUNS = 5  # how many times to retrain each model
 
 MODELS = {
     "mse_only": {
@@ -26,7 +26,7 @@ RESULTS = {
 # -------------------------------------------------------------------------
 # Helper to run shell commands
 # -------------------------------------------------------------------------
-def run(cmd):
+def run_cmd(cmd):
     print(f"\n[RUN] {cmd}\n")
     subprocess.run(cmd, shell=True, check=True)
 
@@ -47,7 +47,8 @@ def parse_metrics(output_file):
         elif line.startswith("spec_dev:"):
             metrics["spec_dev"] = float(line.split(":")[1].strip())
 
-    if set(metrics.keys()) != {"mse", "acf_dev", "spec_dev"}:
+    required = {"mse", "acf_dev", "spec_dev"}
+    if set(metrics.keys()) != required:
         raise ValueError(f"Could not parse all metrics from {output_file}: {metrics}")
 
     return metrics
@@ -63,16 +64,17 @@ for model_key, cfg in MODELS.items():
     print(f" Running model: {model_key}")
     print("==============================")
 
-    for seed in SEEDS:
-        print(f"\n---- Seed {seed} ----")
+    for run_idx in range(NUM_RUNS):
+        print(f"\n---- Run {run_idx + 1}/{NUM_RUNS} ----")
 
         # 1. TRAIN MODEL
-        run(f"python -m train_tpc --config {config_file} --seed {seed}")
+        # No --seed because train_tpc does not accept it
+        run_cmd(f"python -m train_tpc --config {config_file}")
 
-        # expected checkpoint path from your YAML logging.ckpt_dir
+        # expected checkpoint path from YAML logging.ckpt_dir
         ckpt_path = os.path.join(ckpt_dir, "best_struct.pt")
         if not os.path.isfile(ckpt_path):
-            # fallback: search inside ckpt_dir if trainer adds subfolders
+            # fallback: search inside ckpt_dir if trainer nests folders
             print(f"[WARN] {ckpt_path} not found, searching in {ckpt_dir}...")
             found = None
             for root, _, files in os.walk(ckpt_dir):
@@ -91,8 +93,8 @@ for model_key, cfg in MODELS.items():
         print(f"[INFO] Using checkpoint: {ckpt_path}")
 
         # 2. RUN EVALUATION (500 windows for stable stats)
-        out_file = f"eval_{model_key}_seed{seed}.txt"
-        run(
+        out_file = f"eval_{model_key}_run{run_idx}.txt"
+        run_cmd(
             "python -m eval.eval_structural "
             f"--ckpt {ckpt_path} "
             f"--config {config_file} "
@@ -102,7 +104,7 @@ for model_key, cfg in MODELS.items():
 
         # 3. PARSE RESULTS
         metrics = parse_metrics(out_file)
-        print(f"[RESULT] Seed {seed} → {metrics}")
+        print(f"[RESULT] Run {run_idx + 1} → {metrics}")
 
         RESULTS[model_key]["mse"].append(metrics["mse"])
         RESULTS[model_key]["acf_dev"].append(metrics["acf_dev"])
@@ -112,16 +114,17 @@ for model_key, cfg in MODELS.items():
 # SUMMARY PRINT
 # -------------------------------------------------------------------------
 print("\n\n==============================")
-print(" FINAL MULTI-SEED RESULTS")
+print(" FINAL MULTI-RUN RESULTS")
 print("==============================")
 
 def mean_std(x):
-    x = np.array(x)
+    x = np.array(x, dtype=float)
     return float(x.mean()), float(x.std())
 
 for model_key in RESULTS:
     print(f"\nModel: {model_key}")
 
     for metric in ["mse", "acf_dev", "spec_dev"]:
-        m, s = mean_std(RESULTS[model_key][metric])
-        print(f"  {metric}: {m:.6f} ± {s:.6f}")
+        vals = RESULTS[model_key][metric]
+        m, s = mean_std(vals)
+        print(f"  {metric}: {m:.6f} ± {s:.6f}   (from {len(vals)} runs)")
