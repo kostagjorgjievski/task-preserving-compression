@@ -44,7 +44,7 @@ do
       --des 'Exp_TPC' \
       --train_epochs 100 \
       --itr 1 \
-      --batch_size 64 \
+      --batch_size 32 \
       --learning_rate 0.0001 \
       >logs/LongForecasting/${model_name}_ETTh1_TPC_${seq_len}_${pred_len}.log
 done
