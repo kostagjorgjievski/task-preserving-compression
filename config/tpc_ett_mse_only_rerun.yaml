@@ -16,6 +16,9 @@ training:
   lr: 0.001
   weight_decay: 0.00001
   device: "cuda"        # same setup as TPC
+  seed: 42           
+  num_workers: 4   
+
 
 validation:
   val_frac: 0.1

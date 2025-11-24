@@ -1,7 +1,9 @@
 # train_tpc.py
 import os
 from pathlib import Path
+import random
 
+import numpy as np
 import torch
 from torch.utils.data import DataLoader, random_split
 
@@ -11,6 +13,19 @@ from models.registry import build_model
 from losses.tpc_loss import TPCLoss
 
 from eval.eval_structural import compute_structural_metrics_from_model
+
+
+def set_seed(seed: int = 42):
+    """Set all relevant random seeds for reproducible runs."""
+    print(f"Setting global seed to {seed}")
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
+  
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 
 def pick_device(cfg):
@@ -26,8 +41,13 @@ def pick_device(cfg):
         return torch.device(requested)
 
 
-def train(config_path):
+def train(config_path: str, seed_override: int | None = None):
     cfg = load_config(config_path)
+
+    # 0. Seed
+    cfg_seed = cfg.get("training", {}).get("seed", 42)
+    seed = seed_override if seed_override is not None else cfg_seed
+    set_seed(seed)
 
     device = pick_device(cfg)
     print(f"Using device: {device}")
@@ -54,25 +74,32 @@ def train(config_path):
     )
 
     # Train / validation split
-    val_frac = cfg.get("validation", {}).get("val_frac", 0.1)
+    vcfg = cfg.get("validation", {})
+    val_frac = vcfg.get("val_frac", 0.1)
     n_total = len(dataset)
     n_val = max(1, int(n_total * val_frac))
     n_train = n_total - n_val
 
+    # Use the same seed for the split generator
+    split_generator = torch.Generator().manual_seed(seed)
     train_dataset, val_dataset = random_split(
         dataset,
         [n_train, n_val],
-        generator=torch.Generator().manual_seed(42),
+        generator=split_generator,
     )
     print(f"Train windows: {len(train_dataset)}, Val windows: {len(val_dataset)}")
 
+    # DataLoader settings
+    tcfg = cfg["training"]
+    num_workers = int(tcfg.get("num_workers", 4))
     loader = DataLoader(
         train_dataset,
-        batch_size=cfg["training"]["batch_size"],
+        batch_size=tcfg["batch_size"],
         shuffle=True,
-        num_workers=4,
+        num_workers=num_workers,
         drop_last=True,
     )
+    print(f"DataLoader num_workers={num_workers}")
 
     # 2. Model
     model = build_model(cfg, num_channels=num_channels).to(device)
@@ -81,11 +108,11 @@ def train(config_path):
     tpc_loss = TPCLoss(cfg)
     opt = torch.optim.AdamW(
         model.parameters(),
-        lr=cfg["training"]["lr"],
-        weight_decay=cfg["training"]["weight_decay"],
+        lr=tcfg["lr"],
+        weight_decay=tcfg["weight_decay"],
     )
 
-    max_epochs = cfg["training"]["max_epochs"]
+    max_epochs = tcfg["max_epochs"]
     log_every = cfg["logging"].get("log_every_n_steps", 50)
 
     ckpt_dir = Path(cfg["logging"].get("ckpt_dir", "checkpoints"))
@@ -99,7 +126,6 @@ def train(config_path):
     best_struct_path = ckpt_dir / "best_struct.pt"
 
     # Structural val weighting
-    vcfg = cfg.get("validation", {})
     alpha_acf = float(vcfg.get("alpha_acf", 1.0))
     alpha_spec = float(vcfg.get("alpha_spec", 1.0))
     val_windows = int(vcfg.get("windows", 50))
@@ -219,6 +245,12 @@ if __name__ == "__main__":
         default="config/tpc_ett_tpc_minimal.yaml",
         help="Path to YAML config",
     )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Random seed to override config training.seed",
+    )
     args = parser.parse_args()
 
-    train(args.config)
+    train(args.config, seed_override=args.seed)
