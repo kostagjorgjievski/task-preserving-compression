@@ -36,11 +36,11 @@ loss:
   use_changepoint: true
 
   lambda_mse: 1.0
-  lambda_acf: 0.2        # from sweep: acf0p2
-  lambda_periodicity: 0.02
-  lambda_motif: 0.05      # mot0p05
-  lambda_freq: 0.08       # freq0p08
-  lambda_cp: 0.01         # cp0p01
+  lambda_acf: 0.1          # from sweep: acf0p1
+  lambda_periodicity: 0.02 # per0p02
+  lambda_motif: 0.1        # mot0p1
+  lambda_freq: 0.2         # freq0p2
+  lambda_cp: 0.01          # cp0p01
 
   acf:
     max_lag: 48
@@ -65,4 +65,4 @@ loss:
 
 logging:
   log_every_n_steps: 50
-  ckpt_dir: "checkpoints/ett_tpc_sweep_best_rerun"
+  ckpt_dir: "checkpoints/ett_tpc_acf0p1_freq0p2_mot0p1_cp0p01_per0p02"
