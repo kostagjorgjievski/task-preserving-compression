@@ -1,0 +1,69 @@
+dataset:
+  name: "ETTh1"
+  csv_path: "data/ETTh1.csv"
+  context_length: 336
+  stride: 1
+
+model:
+  type: "cnn_ae"
+  input_length: 336
+  latent_dim: 118
+  num_channels: 7
+
+training:
+  batch_size: 64
+  max_epochs: 30
+  lr: 0.001
+  weight_decay: 0.00001
+  device: "cuda"        # same setup as TPC
+
+validation:
+  val_frac: 0.1
+  windows: 50
+  max_lag: 48
+  fs: 1.0
+
+  # How we pick best_struct.pt
+  alpha_acf: 10.0
+  alpha_spec: 1.0
+
+loss:
+  # MSE only baseline
+  use_mse: true
+  use_acf: false
+  use_periodicity: false
+  use_motif: false
+  use_freq: false
+  use_changepoint: false
+
+  lambda_mse: 1.0
+  lambda_acf: 0.0
+  lambda_periodicity: 0.0
+  lambda_motif: 0.0
+  lambda_freq: 0.0
+  lambda_cp: 0.0
+
+  acf:
+    max_lag: 48
+
+  periodicity:
+    seasonal_lags: [24, 48]
+
+  freq:
+    use_log: true
+    normalize: true
+
+  motif:
+    patch_len: 24
+    stride: 8
+    normalize: true
+    reduction: "mean"
+
+  changepoint:
+    kernel_size: 5
+    bandwidth: 3
+    reduction: "mean"
+
+logging:
+  log_every_n_steps: 50
+  ckpt_dir: "checkpoints/ett_mse_only_rerun"

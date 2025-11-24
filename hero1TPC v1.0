@@ -1,0 +1,35 @@
+λ_acf = 0.2, λ_freq = 0.08, λ_motif = 0.05, λ_cp = 0.01, λ_per = 0.02
+λ = (acf=0.2, freq=0.08, motif=0.05, cp=0.01, per=0.02)
+
+mse = 0.11328
+acf_dev = 0.00572
+spec_dev = 4.50182
+
+
+
+
+
+
+Best MSE
+
+acf0p2_freq0p08_mot0p05_cp0p02_per0p02
+
+λ = (acf=0.2, freq=0.08, motif=0.05, cp=0.02, per=0.02)
+
+mse = 0.10964, acf_dev = 0.00891, spec_dev = 5.60619
+
+Best ACF deviation
+
+acf0p2_freq0p08_mot0p05_cp0p01_per0p02
+
+λ = (acf=0.2, freq=0.08, motif=0.05, cp=0.01, per=0.02)
+
+mse = 0.11328, acf_dev = 0.00572, spec_dev = 4.50182
+
+Best spectrum deviation
+
+acf0p1_freq0p2_mot0p1_cp0p01_per0p02
+
+λ = (acf=0.1, freq=0.2, motif=0.1, cp=0.01, per=0.02)
+
+mse = 0.16231, acf_dev = 0.00894, spec_dev = 2.72632
