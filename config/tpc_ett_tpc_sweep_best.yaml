@@ -65,4 +65,4 @@ loss:
 
 logging:
   log_every_n_steps: 50
-  ckpt_dir: "checkpoints/ett_tpc_acf0p1_freq0p2_mot0p1_cp0p01_per0p02"
+  ckpt_dir: "checkpoints/ett_tpc_sweep_best_rerun"
