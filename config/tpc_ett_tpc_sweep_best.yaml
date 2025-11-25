@@ -40,7 +40,7 @@ loss:
 
 
   lambda_mse: 1.0
-  lambda_acf: 0.6        # from sweep: acf0p2
+  lambda_acf: 0.7        # from sweep: acf0p2
   lambda_periodicity: 0.02
   lambda_motif: 0.03      # mot0p05
   lambda_freq: 0.04       # freq0p08
