@@ -12,7 +12,7 @@ model:
 
 training:
   batch_size: 64
-  max_epochs: 30
+  max_epochs: 60
   lr: 0.001
   weight_decay: 0.00001
   device: "cuda"
